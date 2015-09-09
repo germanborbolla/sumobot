@@ -23,9 +23,6 @@ import java.io.File
 import akka.actor.{ActorRef, ActorSystem, Props}
 import com.sumologic.sumobot.plugins.PluginCollection
 import com.typesafe.config.ConfigFactory
-import slack.rtm.SlackRtmClient
-
-import scala.concurrent.duration._
 
 object Bootstrap {
 
@@ -37,13 +34,8 @@ object Bootstrap {
 
   def bootstrap(brainProps: Props,
                 pluginCollections: PluginCollection*): Unit = {
-    val slackConfig = system.settings.config.getConfig("slack")
-    val rtmClient = SlackRtmClient(
-      token = slackConfig.getString("api.token"),
-      duration = slackConfig.getInt("connect.timeout.seconds").seconds)
-
     val brain = system.actorOf(brainProps, "brain")
-    receptionist = Some(system.actorOf(Receptionist.props(rtmClient, brain), "receptionist"))
+    receptionist = Some(system.actorOf(Props(classOf[Receptionist]), "receptionist"))
 
     pluginCollections.par.foreach(_.setup)
 

@@ -19,12 +19,14 @@
 package com.sumologic.sumobot.core
 
 import akka.actor._
+import com.sumologic.sumobot.brain.BrainConfiguration
 import com.sumologic.sumobot.core.Receptionist.{RtmStateRequest, RtmStateResponse}
 import com.sumologic.sumobot.core.model._
 import com.sumologic.sumobot.plugins.BotPlugin.{InitializePlugin, PluginAdded, PluginRemoved}
 import slack.models.{ImOpened, Message, MessageWithSubtype}
 import slack.rtm.SlackRtmConnectionActor.SendMessage
 import slack.rtm.{RtmState, SlackRtmClient}
+import scala.concurrent.duration._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -33,18 +35,11 @@ object Receptionist {
   case class RtmStateRequest(sendTo: ActorRef)
 
   case class RtmStateResponse(rtmState: RtmState)
-
-  def props(rtmClient: SlackRtmClient, brain: ActorRef): Props =
-    Props(classOf[Receptionist], rtmClient, brain)
 }
 
-class Receptionist(rtmClient: SlackRtmClient, brain: ActorRef) extends Actor {
+class Receptionist extends Actor {
 
-  private val slack = rtmClient.actor
-  private val blockingClient = rtmClient.apiClient
-  private val selfId = rtmClient.state.self.id
-  private val selfName = rtmClient.state.self.name
-  rtmClient.addEventListener(self)
+  private var rtmClient: SlackRtmClient = _
 
   private val atMention = """<@(\w+)>:(.*)""".r
   private val atMentionWithoutColon = """<@(\w+)>\s(.*)""".r
@@ -54,14 +49,17 @@ class Receptionist(rtmClient: SlackRtmClient, brain: ActorRef) extends Actor {
 
   private val pluginRegistry = context.system.actorOf(Props(classOf[PluginRegistry]), "plugin-registry")
 
+  private val brain = context.system.actorOf(BrainConfiguration(context.system))
+
   override def preStart(): Unit = {
+    createRtmClient()
     context.system.eventStream.subscribe(self, classOf[OutgoingMessage])
     context.system.eventStream.subscribe(self, classOf[OpenIM])
     context.system.eventStream.subscribe(self, classOf[RtmStateRequest])
   }
 
-
   override def postStop(): Unit = {
+    rtmClient.close()
     context.system.eventStream.unsubscribe(self)
   }
 
@@ -75,7 +73,7 @@ class Receptionist(rtmClient: SlackRtmClient, brain: ActorRef) extends Actor {
       pluginRegistry ! message
 
     case OutgoingMessage(channel, text) =>
-      slack ! SendMessage(channel.id, text)
+      rtmClient.actor ! SendMessage(channel.id, text)
 
     case ImOpened(user, channel) =>
       pendingIMSessionsByUserId.get(user).foreach {
@@ -85,7 +83,7 @@ class Receptionist(rtmClient: SlackRtmClient, brain: ActorRef) extends Actor {
       }
 
     case OpenIM(userId, doneRecipient, doneMessage) =>
-      blockingClient.openIm(userId)
+      rtmClient.apiClient.openIm(userId)
       pendingIMSessionsByUserId = pendingIMSessionsByUserId + (userId ->(doneRecipient, doneMessage))
 
     case message: Message =>
@@ -103,13 +101,16 @@ class Receptionist(rtmClient: SlackRtmClient, brain: ActorRef) extends Actor {
 
     case RtmStateRequest(sendTo) =>
       sendTo ! RtmStateResponse(rtmClient.state)
+
+    case _ =>
+      println("PING PING PING")
   }
 
   protected def translateMessage(channelId: String, userId: String, text: String): IncomingMessage = {
 
     val channel = Channel.forChannelId(rtmClient.state, channelId)
     val sentByUser = rtmClient.state.users.find(_.id == userId).
-      getOrElse(throw new IllegalStateException(s"Message from unknown user: $userId"))
+        getOrElse(throw new IllegalStateException(s"Message from unknown user: $userId"))
 
     text match {
       case atMention(user, text) if user == selfId =>
@@ -122,4 +123,16 @@ class Receptionist(rtmClient: SlackRtmClient, brain: ActorRef) extends Actor {
         IncomingMessage(text.trim, channel.isInstanceOf[InstantMessageChannel], channel, sentByUser)
     }
   }
+
+  private def createRtmClient(): Unit = {
+    val slackConfig = context.system.settings.config.getConfig("slack")
+    rtmClient = SlackRtmClient(
+      token = slackConfig.getString("api.token"),
+      duration = slackConfig.getInt("connect.timeout.seconds").seconds)
+    rtmClient.addEventListener(self)
+  }
+
+  private def selfId = rtmClient.state.self.id
+
+  private def selfName = rtmClient.state.self.name
 }
