@@ -21,8 +21,11 @@ package com.sumologic.sumobot.plugins.advice
 import akka.actor.{ActorSystem, Props}
 import com.sumologic.sumobot.plugins.BotPlugin.InitializePlugin
 import com.sumologic.sumobot.test.{BotPluginTestKit, SumoBotSpec}
+import com.typesafe.config.ConfigFactory
+import scala.concurrent.duration._
 
-class AdviceTest extends BotPluginTestKit(ActorSystem("AdviceTest")) with SumoBotSpec {
+
+class AdviceTest extends BotPluginTestKit(ActorSystem("AdviceTest", ConfigFactory.parseResourcesAnySyntax("reference.conf").resolve())) with SumoBotSpec {
 
   val adviceRef = system.actorOf(Props[Advice], "advice")
   adviceRef ! InitializePlugin(null, null, null)
@@ -38,7 +41,7 @@ class AdviceTest extends BotPluginTestKit(ActorSystem("AdviceTest")) with SumoBo
 
     "retrieve advice" in {
       adviceRef ! instantMessage("I need some advice")
-      confirmOutgoingMessage {
+      confirmOutgoingMessage(5.seconds) {
         msg =>
           println(s"ADVICE: ${msg.text}")
           msg.text should not include("No advice")

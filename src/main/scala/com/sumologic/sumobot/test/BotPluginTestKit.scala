@@ -34,8 +34,8 @@ class BotPluginTestKit(_system: ActorSystem)
   protected val outgoingMessageProbe = TestProbe()
   system.eventStream.subscribe(outgoingMessageProbe.ref, classOf[OutgoingMessage])
 
-  protected def confirmOutgoingMessage(test: OutgoingMessage => Unit, timeout: FiniteDuration = 1.second): Unit = {
-    outgoingMessageProbe.expectMsgClass(1.second, classOf[OutgoingMessage]) match {
+  protected def confirmOutgoingMessage(timeout: FiniteDuration = 1.second)(test: OutgoingMessage => Unit): Unit = {
+    outgoingMessageProbe.expectMsgClass(timeout, classOf[OutgoingMessage]) match {
       case msg: OutgoingMessage =>
         test(msg)
     }
