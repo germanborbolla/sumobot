@@ -22,8 +22,8 @@ import akka.actor._
 import com.sumologic.sumobot.core.Receptionist.{RtmStateRequest, RtmStateResponse}
 import com.sumologic.sumobot.core.model._
 import com.sumologic.sumobot.plugins.BotPlugin.{InitializePlugin, PluginAdded, PluginRemoved}
+import slack.api.{BlockingSlackApiClient, SlackApiClient}
 import slack.models.{ImOpened, Message, MessageChanged}
-import slack.rtm.SlackRtmConnectionActor.SendMessage
 import slack.rtm.{RtmState, SlackRtmClient}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -34,14 +34,12 @@ object Receptionist {
 
   case class RtmStateResponse(rtmState: RtmState)
 
-  def props(rtmClient: SlackRtmClient, brain: ActorRef): Props =
-    Props(classOf[Receptionist], rtmClient, brain)
+  def props(rtmClient: SlackRtmClient, asyncClient: SlackApiClient, brain: ActorRef): Props =
+    Props(classOf[Receptionist], rtmClient, asyncClient, brain)
 }
 
-class Receptionist(rtmClient: SlackRtmClient, brain: ActorRef) extends Actor with ActorLogging {
+class Receptionist(rtmClient: SlackRtmClient, asyncClient: SlackApiClient, brain: ActorRef) extends Actor with ActorLogging {
 
-  private val slack = rtmClient.actor
-  private val asyncClient = rtmClient.apiClient.client
   private val selfId = rtmClient.state.self.id
   private val selfName = rtmClient.state.self.name
   rtmClient.addEventListener(self)
@@ -79,7 +77,7 @@ class Receptionist(rtmClient: SlackRtmClient, brain: ActorRef) extends Actor wit
 
     case OutgoingMessage(channel, text) =>
       log.info(s"sending - ${channel.name}: $text")
-      slack ! SendMessage(channel.id, text)
+      rtmClient.sendMessage(channel.id, text)
 
     case ImOpened(user, channel) =>
       pendingIMSessionsByUserId.get(user).foreach {
@@ -89,7 +87,7 @@ class Receptionist(rtmClient: SlackRtmClient, brain: ActorRef) extends Actor wit
       }
 
     case OpenIM(userId, doneRecipient, doneMessage) =>
-      asyncClient.openIm(userId)
+      asyncClient.openIm(userId)(context.system)
       pendingIMSessionsByUserId = pendingIMSessionsByUserId + (userId ->(doneRecipient, doneMessage))
 
     case message: Message if !tooOld(message.ts, message) =>

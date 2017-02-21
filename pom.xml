@@ -37,7 +37,7 @@
     <dependency>
       <groupId>com.github.gilbertw1</groupId>
       <artifactId>slack-scala-client_2.11</artifactId>
-      <version>0.1.8</version>
+      <version>0.2.0</version>
       <exclusions>
         <exclusion>
           <groupId>ch.qos.logback</groupId>
@@ -49,6 +49,11 @@
     <dependency>
       <groupId>com.typesafe.akka</groupId>
       <artifactId>akka-testkit_${scala.version.major}</artifactId>
+      <version>${akka.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.typesafe.akka</groupId>
+      <artifactId>akka-slf4j_${scala.version.major}</artifactId>
       <version>${akka.version}</version>
     </dependency>
 

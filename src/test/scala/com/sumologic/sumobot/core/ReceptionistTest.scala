@@ -50,15 +50,13 @@ class ReceptionistTest
 
   val state = new RtmState(startState)
   val client = mock[SlackRtmClient]
-  val blockingClient = mock[BlockingSlackApiClient]
+  val asyncClient = mock[SlackApiClient]
   when(client.state).thenReturn(state)
-  when(client.apiClient).thenReturn(blockingClient)
-  when(blockingClient.client).thenReturn(mock[SlackApiClient])
 
   private val probe = new TestProbe(system)
   system.eventStream.subscribe(probe.ref, classOf[IncomingMessage])
   private val brain = system.actorOf(Props(classOf[InMemoryBrain]), "brain")
-  private val sut = system.actorOf(Props(classOf[Receptionist], client, brain))
+  private val sut = system.actorOf(Props(classOf[Receptionist], client, asyncClient, brain))
 
   "Receptionist" should {
     "mark messages as addressed to us" when {
