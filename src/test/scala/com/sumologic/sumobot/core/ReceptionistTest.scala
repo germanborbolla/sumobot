@@ -21,14 +21,14 @@ package com.sumologic.sumobot.core
 import akka.actor.{ActorSystem, Props}
 import akka.testkit.{TestKit, TestProbe}
 import com.sumologic.sumobot.brain.InMemoryBrain
-import com.sumologic.sumobot.core.Receptionist.{RtmStateResponse, RtmStateRequest}
-import com.sumologic.sumobot.core.model.{OpenIM, IncomingMessage}
+import com.sumologic.sumobot.core.Receptionist.{RtmStateRequest, RtmStateResponse}
+import com.sumologic.sumobot.core.model.{IncomingMessage, OpenIM}
 import com.sumologic.sumobot.plugins.BotPlugin.{InitializePlugin, PluginAdded}
 import com.sumologic.sumobot.test.SumoBotSpec
 import org.mockito.Mockito._
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
-import slack.api.{BlockingSlackApiClient, RtmStartState}
+import slack.api.{BlockingSlackApiClient, RtmStartState, SlackApiClient}
 import slack.models._
 import slack.rtm.{RtmState, SlackRtmClient}
 
@@ -53,6 +53,7 @@ class ReceptionistTest
   val blockingClient = mock[BlockingSlackApiClient]
   when(client.state).thenReturn(state)
   when(client.apiClient).thenReturn(blockingClient)
+  when(blockingClient.client).thenReturn(mock[SlackApiClient])
 
   private val probe = new TestProbe(system)
   system.eventStream.subscribe(probe.ref, classOf[IncomingMessage])
