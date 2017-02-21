@@ -83,10 +83,11 @@
       <artifactId>slf4j-api</artifactId>
       <version>1.7.21</version>
     </dependency>
+    <!-- NOTE: the following is in provided scope so that users of sumobot can use different logging implementations -->
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-log4j12</artifactId>
-      <version>1.7.12</version>
+      <version>1.7.21</version>
       <scope>provided</scope>
     </dependency>
 
