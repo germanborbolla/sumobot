@@ -38,6 +38,12 @@
       <groupId>com.github.gilbertw1</groupId>
       <artifactId>slack-scala-client_2.11</artifactId>
       <version>0.1.8</version>
+      <exclusions>
+        <exclusion>
+          <groupId>ch.qos.logback</groupId>
+          <artifactId>logback-classic</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <dependency>
@@ -90,6 +96,10 @@
         <exclusion>
           <groupId>org.specs2</groupId>
           <artifactId>specs2_${scala.version.major}</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>ch.qos.logback</groupId>
+          <artifactId>logback-classic</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
