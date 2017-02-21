@@ -141,6 +141,13 @@ class ReceptionistTest
       sut ! RtmStateRequest(probe.ref)
       probe.expectMsgClass(classOf[RtmStateResponse])
     }
+
+    "replace html entities with their characters" in {
+      sut ! Message(currentTimeStamp, im.id, somebodyElse.id, "&amp; &lt; &gt;", None)
+      val result = probe.expectMsgClass(classOf[IncomingMessage])
+      result.canonicalText should be("& < >")
+      result.addressedToUs should be(true)
+    }
   }
 
   private def currentTimeStamp: String = s"${System.currentTimeMillis()/1000}.000001"

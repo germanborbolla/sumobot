@@ -22,6 +22,7 @@ import akka.actor._
 import com.sumologic.sumobot.core.Receptionist.{RtmStateRequest, RtmStateResponse}
 import com.sumologic.sumobot.core.model._
 import com.sumologic.sumobot.plugins.BotPlugin.{InitializePlugin, PluginAdded, PluginRemoved}
+import org.apache.commons.lang.StringEscapeUtils
 import slack.api.{BlockingSlackApiClient, SlackApiClient}
 import slack.models.{ImOpened, Message, MessageChanged}
 import slack.rtm.{RtmState, SlackRtmClient}
@@ -101,21 +102,21 @@ class Receptionist(rtmClient: SlackRtmClient, asyncClient: SlackApiClient, brain
       sendTo ! RtmStateResponse(rtmClient.state)
   }
 
-  protected def translateMessage(channelId: String, userId: String, text: String): IncomingMessage = {
+  protected def translateMessage(channelId: String, userId: String, incomingText: String): IncomingMessage = {
 
     val channel = Channel.forChannelId(rtmClient.state, channelId)
     val sentByUser = rtmClient.state.users.find(_.id == userId).
       getOrElse(throw new IllegalStateException(s"Message from unknown user: $userId"))
 
-    text match {
+    StringEscapeUtils.unescapeHtml(incomingText) match {
       case atMention(user, text) if user == selfId =>
         IncomingMessage(text.trim, true, channel, sentByUser)
       case atMentionWithoutColon(user, text) if user == selfId =>
         IncomingMessage(text.trim, true, channel, sentByUser)
       case simpleNamePrefix(name, text) if name.equalsIgnoreCase(selfName) =>
         IncomingMessage(text.trim, true, channel, sentByUser)
-      case _ =>
-        IncomingMessage(text.trim, channel.isInstanceOf[InstantMessageChannel], channel, sentByUser)
+      case x =>
+        IncomingMessage(x.trim, channel.isInstanceOf[InstantMessageChannel], channel, sentByUser)
     }
   }
 
