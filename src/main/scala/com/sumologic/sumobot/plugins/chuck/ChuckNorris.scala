@@ -42,13 +42,13 @@ class ChuckNorris extends BotPlugin {
   private val BaseUrl = "http://api.icndb.com/jokes/random"
 
   override protected def receiveIncomingMessage: ReceiveIncomingMessage = {
-    case msg@IncomingMessage(ChuckNorris(), _, _, _) =>
+    case msg@IncomingMessage(ChuckNorris(), _, _, _, _, _) =>
       msg.httpGet(BaseUrl)(convertResponse)
 
-    case msg@IncomingMessage(ChuckNorrisMe(), _, _, sentByUser) =>
+    case msg@IncomingMessage(ChuckNorrisMe(), _, _, sentByUser, _, _) =>
       msg.httpGet(url(sentByUser))(convertResponse)
 
-    case msg@IncomingMessage(ChuckNorrisAtMention(userId), _, _, _) =>
+    case msg@IncomingMessage(ChuckNorrisAtMention(userId), _, _, _, _, _) =>
       userById(userId).foreach {
         user =>
           msg.httpGet(url(user))(convertResponse)

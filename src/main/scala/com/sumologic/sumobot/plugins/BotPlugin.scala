@@ -76,21 +76,21 @@ abstract class BotPlugin
   protected def sendMessage(msg: OutgoingMessage): Unit = context.system.eventStream.publish(msg)
 
   class RichIncomingMessage(msg: IncomingMessage) {
-    def response(text: String) = OutgoingMessage(msg.channel, responsePrefix + text)
+    def response(text: String, thread: Option[String] = None) = OutgoingMessage(msg.channel, responsePrefix + text, thread)
 
-    def message(text: String) = OutgoingMessage(msg.channel, text)
+    def message(text: String, thread: Option[String] = None) = OutgoingMessage(msg.channel, text, thread)
 
-    def say(text: String) = sendMessage(message(text))
+    def say(text: String, thread: Option[String] = None) = sendMessage(message(text, thread))
 
-    def respond(text: String) = sendMessage(response(text))
+    def respond(text: String, thread: Option[String] = None) = sendMessage(response(text, thread))
 
     def senderId: String = s"<@${msg.sentByUser.id}>"
 
     private def responsePrefix: String = if (msg.channel.isInstanceOf[InstantMessageChannel]) "" else s"$senderId: "
 
-    def scheduleResponse(delay: FiniteDuration, text: String): Unit = scheduleOutgoingMessage(delay, response(text))
+    def scheduleResponse(delay: FiniteDuration, text: String, thread: Option[String] = None): Unit = scheduleOutgoingMessage(delay, response(text, thread))
 
-    def scheduleMessage(delay: FiniteDuration, text: String): Unit = scheduleOutgoingMessage(delay, message(text))
+    def scheduleMessage(delay: FiniteDuration, text: String, thread: Option[String] = None): Unit = scheduleOutgoingMessage(delay, message(text, thread))
 
     def scheduleOutgoingMessage(delay: FiniteDuration, outgoingMessage: OutgoingMessage): Unit = {
       context.system.scheduler.scheduleOnce(delay, new Runnable() {
@@ -194,7 +194,7 @@ abstract class BotPlugin
   }
 
   protected final def initialized: Receive = {
-    case message@IncomingMessage(text, _, _, _) =>
+    case message@IncomingMessage(text, _, _, _, _, _) =>
       receiveIncomingMessageInternal(message)
   }
 

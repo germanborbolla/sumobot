@@ -76,9 +76,9 @@ class Receptionist(rtmClient: SlackRtmClient, asyncClient: SlackApiClient, brain
     case message@PluginRemoved(_) =>
       pluginRegistry ! message
 
-    case OutgoingMessage(channel, text) =>
+    case OutgoingMessage(channel, text, thread) =>
       log.info(s"sending - ${channel.name}: $text")
-      rtmClient.sendMessage(channel.id, text)
+      rtmClient.sendMessage(channel.id, text, thread)
 
     case ImOpened(user, channel) =>
       pendingIMSessionsByUserId.get(user).foreach {
@@ -92,17 +92,18 @@ class Receptionist(rtmClient: SlackRtmClient, asyncClient: SlackApiClient, brain
       pendingIMSessionsByUserId = pendingIMSessionsByUserId + (userId ->(doneRecipient, doneMessage))
 
     case message: Message if !tooOld(message.ts, message) =>
-      translateAndDispatch(message.channel, message.user, message.text)
+      translateAndDispatch(message.channel, message.user, message.text, message.ts, message.thread_ts)
 
     case messageChanged: MessageChanged if !tooOld(messageChanged.ts, messageChanged) =>
       val message = messageChanged.message
-      translateAndDispatch(messageChanged.channel, message.user, message.text)
+      // TODO(panda, 2017-02-21): support threads for edited messages
+      translateAndDispatch(messageChanged.channel, message.user, message.text, message.ts, None)
 
     case RtmStateRequest(sendTo) =>
       sendTo ! RtmStateResponse(rtmClient.state)
   }
 
-  protected def translateMessage(channelId: String, userId: String, incomingText: String): IncomingMessage = {
+  protected def translateMessage(channelId: String, userId: String, incomingText: String, ts: String, thread_ts: Option[String]): IncomingMessage = {
 
     val channel = Channel.forChannelId(rtmClient.state, channelId)
     val sentByUser = rtmClient.state.users.find(_.id == userId).
@@ -110,18 +111,18 @@ class Receptionist(rtmClient: SlackRtmClient, asyncClient: SlackApiClient, brain
 
     StringEscapeUtils.unescapeHtml(incomingText) match {
       case atMention(user, text) if user == selfId =>
-        IncomingMessage(text.trim, true, channel, sentByUser)
+        IncomingMessage(text.trim, true, channel, sentByUser, ts, thread_ts)
       case atMentionWithoutColon(user, text) if user == selfId =>
-        IncomingMessage(text.trim, true, channel, sentByUser)
+        IncomingMessage(text.trim, true, channel, sentByUser, ts, thread_ts)
       case simpleNamePrefix(name, text) if name.equalsIgnoreCase(selfName) =>
-        IncomingMessage(text.trim, true, channel, sentByUser)
+        IncomingMessage(text.trim, true, channel, sentByUser, ts, thread_ts)
       case x =>
-        IncomingMessage(x.trim, channel.isInstanceOf[InstantMessageChannel], channel, sentByUser)
+        IncomingMessage(x.trim, channel.isInstanceOf[InstantMessageChannel], channel, sentByUser, ts, thread_ts)
     }
   }
 
-  private def translateAndDispatch(channelId: String, userId: String, text: String): Unit = {
-    val msgToBot = translateMessage(channelId, userId, text)
+  private def translateAndDispatch(channelId: String, userId: String, text: String, ts: String, thread_ts: Option[String]): Unit = {
+    val msgToBot = translateMessage(channelId, userId, text, ts, thread_ts)
     if (userId != selfId) {
       log.info(s"Dispatching message: $msgToBot")
       context.system.eventStream.publish(msgToBot)

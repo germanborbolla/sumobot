@@ -42,7 +42,7 @@ class BotPluginTestKit(_system: ActorSystem)
   }
 
   protected def instantMessage(text: String, user: User = mockUser("123", "jshmoe")): IncomingMessage = {
-    IncomingMessage(text, true, InstantMessageChannel("125", user), user)
+    IncomingMessage(text, true, InstantMessageChannel("125", user), user, "now", None)
   }
 
   protected def mockUser(id: String, name: String): User = {
