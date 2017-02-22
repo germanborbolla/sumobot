@@ -20,7 +20,7 @@ package com.sumologic.sumobot.test
 
 import akka.actor.ActorSystem
 import akka.testkit.{TestKit, TestProbe}
-import com.sumologic.sumobot.core.model.{IncomingMessage, InstantMessageChannel, OutgoingMessage}
+import com.sumologic.sumobot.core.model.{GroupChannel, IncomingMessage, InstantMessageChannel, OutgoingMessage}
 import org.scalatest.BeforeAndAfterAll
 import slack.models.User
 
@@ -41,8 +41,21 @@ class BotPluginTestKit(_system: ActorSystem)
     }
   }
 
-  protected def instantMessage(text: String, user: User = mockUser("123", "jshmoe")): IncomingMessage = {
-    IncomingMessage(text, true, InstantMessageChannel("125", user), user, "now", None)
+  protected def instantMessage(text: String,
+                               user: User = mockUser("123", "jshmoe"),
+                               addressedToUs: Boolean = true,
+                               id: String = s"${System.currentTimeMillis()}.0000",
+                               threadId: Option[String] = None): IncomingMessage = {
+    IncomingMessage(text, addressedToUs, InstantMessageChannel("125", user), user, id, threadId)
+  }
+
+  protected def channelMessage(text: String,
+                               user: User = mockUser("123", "jshmoe"),
+                               channel: GroupChannel = GroupChannel("124", "testing"),
+                               addressedToUs: Boolean = false,
+                               id: String = s"${System.currentTimeMillis()}.0000",
+                               threadId: Option[String] = None): IncomingMessage = {
+    IncomingMessage(text, addressedToUs, channel, user, id, threadId)
   }
 
   protected def mockUser(id: String, name: String): User = {
