@@ -20,7 +20,7 @@ package com.sumologic.sumobot.test
 
 import akka.actor.ActorSystem
 import akka.testkit.{TestKit, TestProbe}
-import com.sumologic.sumobot.core.model.{GroupChannel, IncomingMessage, InstantMessageChannel, OutgoingMessage}
+import com.sumologic.sumobot.core.model.{GroupChannel, IncomingMessage, InstantMessageChannel, OutgoingMessage, PublicChannel}
 import org.scalatest.BeforeAndAfterAll
 import slack.models.User
 
@@ -49,12 +49,21 @@ class BotPluginTestKit(_system: ActorSystem)
     IncomingMessage(text, addressedToUs, InstantMessageChannel("125", user), user, id, threadId)
   }
 
-  protected def channelMessage(text: String,
-                               user: User = mockUser("123", "jshmoe"),
-                               channel: GroupChannel = GroupChannel("124", "testing"),
-                               addressedToUs: Boolean = false,
-                               id: String = s"${System.currentTimeMillis()}.0000",
-                               threadId: Option[String] = None): IncomingMessage = {
+  protected def groupChannelMessage(text: String,
+                                    user: User = mockUser("123", "jshmoe"),
+                                    channel: GroupChannel = GroupChannel("124", "testing"),
+                                    addressedToUs: Boolean = false,
+                                    id: String = s"${System.currentTimeMillis()}.0000",
+                                    threadId: Option[String] = None): IncomingMessage = {
+    IncomingMessage(text, addressedToUs, channel, user, id, threadId)
+  }
+
+  protected def publicChannelMessage(text: String,
+                                     user: User = mockUser("123", "jshmoe"),
+                                     channel: PublicChannel = PublicChannel("124", "testing"),
+                                     addressedToUs: Boolean = false,
+                                     id: String = s"${System.currentTimeMillis()}.0000",
+                                     threadId: Option[String] = None): IncomingMessage = {
     IncomingMessage(text, addressedToUs, channel, user, id, threadId)
   }
 
