@@ -39,14 +39,19 @@ object Bootstrap {
 
   def bootstrap(brainProps: Props,
                 pluginCollections: PluginCollection*): Unit = {
+    val brain = system.actorOf(brainProps, "brain")
+    bootstrap(brain, pluginCollections: _*)
+  }
+
+  def bootstrap(brainRef: ActorRef,
+                pluginCollections: PluginCollection*): Unit = {
     val slackConfig = system.settings.config.getConfig("slack")
     val rtmClient = SlackRtmClient(
       token = slackConfig.getString("api.token"),
       duration = slackConfig.getInt("connect.timeout.seconds").seconds)
     val asyncSlackApiClient = SlackApiClient(slackConfig.getString("api.token"))
 
-    val brain = system.actorOf(brainProps, "brain")
-    receptionist = Some(system.actorOf(Receptionist.props(rtmClient, asyncSlackApiClient, brain), "receptionist"))
+    receptionist = Some(system.actorOf(Receptionist.props(rtmClient, asyncSlackApiClient, brainRef), "receptionist"))
 
     pluginCollections.par.foreach(_.setup)
 
