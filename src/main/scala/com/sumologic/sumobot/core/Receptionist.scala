@@ -45,8 +45,8 @@ class Receptionist(rtmClient: SlackRtmClient, asyncClient: SlackApiClient, brain
   private val selfName = rtmClient.state.self.name
   rtmClient.addEventListener(self)
 
-  private val atMention = """<@(\w+)>:(.*)""".r
-  private val atMentionWithoutColon = """<@(\w+)>\s(.*)""".r
+  private val atMention = """(?s)<@(\w+)>:(.*)""".r
+  private val atMentionWithoutColon = """(?s)<@(\w+)>\s(.*)""".r
   private val simpleNamePrefix = """(\w+)\:?\s(.*)""".r
   private val tsPattern = "(\\d+)\\.(\\d+)".r
 
